@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Get list of changed files
         if: github.event_name == 'pull_request'
@@ -25,7 +27,7 @@ jobs:
           echo "${{github.event}}"
           {
             echo "ALL_CHANGED_FILES<<EOF"
-            git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
+            git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -44,6 +46,7 @@ jobs:
             echo "Running shellcheck on changed shell files only"
             for file in $FILES; do
               if [[ "$file" =~ \.(sh|bash|bats)$ ]]; then
+                echo "Checking $file ..."
                 shellcheck "$file"
               fi
             done
