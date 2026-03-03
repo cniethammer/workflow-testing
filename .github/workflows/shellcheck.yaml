@@ -1,0 +1,49 @@
+name: Shellcheck
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: perform shellcheck analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Get list of changed files
+        if: github.event_name == 'pull_request'
+        id: changed_files
+        run: |
+          echo "Getting changed files for PR ..."
+          {
+            echo "ALL_CHANGED_FILES<<EOF"
+            git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run shellcheck
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            FILES="${{ steps.changed_files.outputs.ALL_CHANGED_FILES }}"
+          else
+            FILES=""
+          fi
+
+          if [[ -z "$FILES" ]]; then
+            echo "Running shellcheck on all shell files"
+            find . -type f -a \( -name '*.sh' -o -name '*.bash' -o -name '*.bats' \) -exec shellcheck {} +
+          else
+            echo "Running shellcheck on changed shell files only"
+            for file in $FILES; do
+              if [[ "$file" =~ \.(sh|bash|bats)$ ]]; then
+                shellcheck "$file"
+              fi
+            done
+          fi
